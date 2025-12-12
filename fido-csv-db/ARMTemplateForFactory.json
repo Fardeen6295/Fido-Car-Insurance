@@ -1,0 +1,793 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "fido-csv-db"
+		},
+		"fido_db_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'fido_db'"
+		},
+		"fido_dl_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'fido_dl'"
+		},
+		"fido_Vault_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://fido-keys.vault.azure.net/"
+		},
+		"fido_db_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "fido-db.database.windows.net"
+		},
+		"fido_db_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "fido-db"
+		},
+		"fido_db_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "adminkhan"
+		},
+		"fido_dl_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://fidodl.dfs.core.windows.net/"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/csv-to-db')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "ForEachTable",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.loop_input",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "CopyCSVtoDB",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "AzureSqlSink",
+											"writeBehavior": "insert",
+											"sqlWriterUseTableLock": false,
+											"tableOption": "autoCreate",
+											"disableMetricsCollection": false
+										},
+										"enableStaging": false,
+										"translator": {
+											"value": "@if(equals(item().table,'claims'),pipeline().parameters.p_claims_schema, if(equals(item().table, 'customers'),pipeline().parameters.p_customers_schema, pipeline().parameters.p_policies_schema))",
+											"type": "Expression"
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "csv_files",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_file_name": {
+													"value": "@item().file",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "fido_db",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_table": {
+													"value": "@item().table",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"loop_input": {
+						"type": "array",
+						"defaultValue": [
+							{
+								"file": "claims.csv",
+								"table": "claims"
+							},
+							{
+								"file": "customers.csv",
+								"table": "customers"
+							},
+							{
+								"file": "policies.csv",
+								"table": "policies"
+							}
+						]
+					},
+					"p_claims_schema": {
+						"type": "object",
+						"defaultValue": {
+							"type": "TabularTranslator",
+							"mappings": [
+								{
+									"source": {
+										"name": "claim_no",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "claim_no",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "policy_no",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "policy_no",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "claim_date",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "claim_date",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "months_as_customer",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "months_as_customer",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "injury",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "injury",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "property",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "property",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "vehicle",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "vehicle",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "total",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "total",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "collision_type",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "collision_type",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "number_of_vehicles_involved",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "number_of_vehicles_involved",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "age",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "age",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "insured_relationship",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "insured_relationship",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "license_issue_date",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "license_issue_date",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "date",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "date",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "hour",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "hour",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "type",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "type",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "severity",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "severity",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "number_of_witnesses",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "number_of_witnesses",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "suspicious_activity",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "suspicious_activity",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								}
+							],
+							"typeConversion": true,
+							"typeConversionSettings": {
+								"allowDataTruncation": true,
+								"treatBooleanAsNumber": false
+							}
+						}
+					},
+					"p_customers_schema": {
+						"type": "object",
+						"defaultValue": {
+							"type": "TabularTranslator",
+							"mappings": [
+								{
+									"source": {
+										"name": "customer_id",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "customer_id",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "date_of_birth",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "date_of_birth",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "borough",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "borough",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "neighborhood",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "neighborhood",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "zip_code",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "zip_code",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "name",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "name",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								}
+							],
+							"typeConversion": true,
+							"typeConversionSettings": {
+								"allowDataTruncation": true,
+								"treatBooleanAsNumber": false
+							}
+						}
+					},
+					"p_policies_schema": {
+						"type": "object",
+						"defaultValue": {
+							"type": "TabularTranslator",
+							"mappings": [
+								{
+									"source": {
+										"name": "POLICY_NO",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "POLICY_NO",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "CUST_ID",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "CUST_ID",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "POLICYTYPE",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "POLICYTYPE",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "POL_ISSUE_DATE",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "POL_ISSUE_DATE",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "POL_EFF_DATE",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "POL_EFF_DATE",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "POL_EXPIRY_DATE",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "POL_EXPIRY_DATE",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "MAKE",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "MAKE",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "MODEL",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "MODEL",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "MODEL_YEAR",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "MODEL_YEAR",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "CHASSIS_NO",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "CHASSIS_NO",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "USE_OF_VEHICLE",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "USE_OF_VEHICLE",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "PRODUCT",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "PRODUCT",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "SUM_INSURED",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "SUM_INSURED",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "PREMIUM",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "PREMIUM",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								},
+								{
+									"source": {
+										"name": "DEDUCTABLE",
+										"type": "String",
+										"physicalType": "String"
+									},
+									"sink": {
+										"name": "DEDUCTABLE",
+										"type": "String",
+										"physicalType": "nvarchar"
+									}
+								}
+							],
+							"typeConversion": true,
+							"typeConversionSettings": {
+								"allowDataTruncation": true,
+								"treatBooleanAsNumber": false
+							}
+						}
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/csv_files')]",
+				"[concat(variables('factoryId'), '/datasets/fido_db')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/csv_files')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "fido_dl",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().p_file_name",
+							"type": "Expression"
+						},
+						"folderPath": "csv-files",
+						"fileSystem": "landing"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/fido_dl')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/fido_db')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "fido_db",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_table": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": {
+						"value": "@dataset().p_table",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/fido_db')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/fido_Vault')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('fido_Vault_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/fido_db')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('fido_db_properties_typeProperties_server')]",
+					"database": "[parameters('fido_db_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('fido_db_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('fido_db_password')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/fido_dl')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('fido_dl_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('fido_dl_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
