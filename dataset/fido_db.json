@@ -1,0 +1,24 @@
+{
+	"name": "fido_db",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "fido_db",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"p_table": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": {
+				"value": "@dataset().p_table",
+				"type": "Expression"
+			}
+		}
+	}
+}
