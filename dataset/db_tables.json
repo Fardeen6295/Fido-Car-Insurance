@@ -1,0 +1,12 @@
+{
+	"name": "db_tables",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "fido_db",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}
