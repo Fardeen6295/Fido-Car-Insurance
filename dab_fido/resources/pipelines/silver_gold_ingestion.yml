@@ -1,0 +1,17 @@
+id: bf57ecb5-f1d1-4d02-9ffc-12d588655d83
+pipeline_type: WORKSPACE
+name: silver_gold_ingestion
+libraries:
+  - glob:
+      include: ../../src/silver/silver_gold_ingestion/transformations/**
+schema: 02_silver
+continuous: false
+development: false
+photon: true
+channel: CURRENT
+catalog: smart_claims_dev
+serverless: true
+root_path: ../../src/silver/silver_gold_ingestion
+environment:
+  dependencies:
+    - geopy==2.4.1

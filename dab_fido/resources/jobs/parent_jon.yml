@@ -1,0 +1,29 @@
+resources:
+  jobs:
+    Parent_Job:
+      name: Parent_Job
+      tasks:
+        - task_key: claim_images_arhive
+          notebook_task:
+            notebook_path: ../../src/bronze/Claim_Images_CleanSource.ipynb
+            source: WORKSPACE
+        - task_key: ingesting_telematics_data
+          notebook_task:
+            notebook_path: ../../src/bronze/telematics-bronze-ingestion.ipynb
+            source: WORKSPACE
+        - task_key: training_images_and_claim_images_metadat
+          depends_on:
+            - task_key: claim_images_arhive
+            - task_key: ingesting_telematics_data
+          pipeline_task:
+            pipeline_id: 74e2baa5-6060-4819-a95d-47c61e1019ef
+            full_refresh: false
+        - task_key: silver_and_gold
+          depends_on:
+            - task_key: training_images_and_claim_images_metadat
+          pipeline_task:
+            pipeline_id: bf57ecb5-f1d1-4d02-9ffc-12d588655d83
+            full_refresh: false
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
