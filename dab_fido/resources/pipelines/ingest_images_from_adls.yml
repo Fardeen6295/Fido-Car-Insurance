@@ -1,0 +1,15 @@
+id: 74e2baa5-6060-4819-a95d-47c61e1019ef
+pipeline_type: WORKSPACE
+name: ingest_images_from_adls
+libraries:
+  - glob:
+      include: ../../src/bronze/ingest_images_from_adls/transformations/**
+schema: 01_bronze
+continuous: false
+development: false
+photon: true
+edition: ADVANCED
+channel: CURRENT
+catalog: smart_claims_dev
+serverless: true
+root_path: ../../src/bronze/ingest_images_from_adls
